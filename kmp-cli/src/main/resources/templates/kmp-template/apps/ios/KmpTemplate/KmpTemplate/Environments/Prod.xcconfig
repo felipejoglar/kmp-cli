@@ -1,0 +1,5 @@
+// Production Environment Configuration
+OTHER_SWIFT_FLAGS = -DPROD
+PRODUCT_BUNDLE_IDENTIFIER = com.example.kmptemplate.ios
+APP_DISPLAY_NAME = Kmp Template
+KOTLIN_FRAMEWORK_BUILD_TYPE = $(CONFIGURATION)

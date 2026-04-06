@@ -1,0 +1,5 @@
+// Beta Environment Configuration
+OTHER_SWIFT_FLAGS = -DBETA
+PRODUCT_BUNDLE_IDENTIFIER = com.example.kmptemplate.ios.beta
+APP_DISPLAY_NAME = Kmp Template Beta
+KOTLIN_FRAMEWORK_BUILD_TYPE = debug

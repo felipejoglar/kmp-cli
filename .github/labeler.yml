@@ -1,0 +1,36 @@
+ci:
+  - changed-files:
+      - any-glob-to-any-file: .github/**
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - gradle/libs.versions.toml
+          - gradle/wrapper/**
+          - build.gradle.kts
+          - kmp-cli/build.gradle.kts
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - docs/**
+
+templates:
+  - changed-files:
+      - any-glob-to-any-file: kmp-cli/src/main/resources/templates/**
+
+commands:
+  - changed-files:
+      - any-glob-to-any-file: kmp-cli/src/**/command/**
+
+output:
+  - changed-files:
+      - any-glob-to-any-file:
+          - kmp-cli/src/**/config/CliHelpFormatter.kt
+          - kmp-cli/src/**/util/Logger.kt
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - kmp-cli/src/**/*Test*

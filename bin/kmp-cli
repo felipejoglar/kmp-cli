@@ -1,0 +1,28 @@
+#!/bin/bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+cd "$PROJECT_DIR"
+
+OS="$(uname -s)"
+ARCH="$(uname -m)"
+EXE_EXT=".kexe"
+
+case "$OS-$ARCH" in
+    Darwin-arm64)          TARGET="macosArm64"  ;;
+    Darwin-x86_64)         TARGET="macosX64"    ;;
+    Linux-x86_64)          TARGET="linuxX64"    ;;
+    Linux-aarch64)         TARGET="linuxArm64"  ;;
+    MINGW*|MSYS*|CYGWIN*)  TARGET="mingwX64"; EXE_EXT=".exe" ;;
+    *)  echo "Unsupported platform: $OS $ARCH" >&2; exit 1 ;;
+esac
+
+TASK_TARGET="$(echo "$TARGET" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
+BUILD_DIR="kmp-cli/build/bin/${TARGET}/debugExecutable"
+
+./gradlew ":kmp-cli:linkDebugExecutable${TASK_TARGET}" --quiet
+rsync -a --delete kmp-cli/src/main/resources/templates/ "$BUILD_DIR/templates/"
+
+./"$BUILD_DIR/kmp-cli${EXE_EXT}" "$@"

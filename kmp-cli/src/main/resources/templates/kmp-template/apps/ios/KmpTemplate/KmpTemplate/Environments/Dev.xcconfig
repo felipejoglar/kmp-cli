@@ -1,0 +1,5 @@
+// Development Environment Configuration
+OTHER_SWIFT_FLAGS = -DDEV
+PRODUCT_BUNDLE_IDENTIFIER = com.example.kmptemplate.ios.dev
+APP_DISPLAY_NAME = Kmp Template Dev
+KOTLIN_FRAMEWORK_BUILD_TYPE = debug

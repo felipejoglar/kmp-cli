@@ -1,0 +1,191 @@
+#!/bin/bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+cd "$PROJECT_DIR"
+
+BUILD_DIR="kmp-cli/build/dist/bin/kmp-cli.kexe"
+
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+NC=$'\033[0m'
+
+pass() { printf "  ${GREEN}✓${NC} %s\n" "$1"; }
+fail() { printf "  ${RED}✗${NC} %s\n" "$1"; }
+
+now() { perl -MTime::HiRes=time -e 'printf "%.3f\n", time'; }
+elapsed() { perl -e "printf '%.2fs', $1 - $2"; }
+
+verify_version() {
+    echo "Verifying --version..."
+    OUTPUT=$("$BUILD_DIR" --version --quiet 2>/dev/null)
+    if echo "$OUTPUT" | grep -q "KMP CLI"; then
+        printf "${GREEN}✓${NC} Version verification passed\n"
+    else
+        printf "${RED}✗${NC} Version verification failed\n"
+        return 1
+    fi
+}
+
+verify_help() {
+    echo "Verifying --help..."
+    if "$BUILD_DIR" --help --quiet 2>/dev/null | grep -q "Usage"; then
+        printf "${GREEN}✓${NC} Help verification passed\n"
+    else
+        printf "${RED}✗${NC} Help verification failed\n"
+        return 1
+    fi
+}
+
+verify_new() {
+    echo "Verifying new command..."
+    rm -rf TestApp
+
+    "$BUILD_DIR" new TestApp --package=com.mycompany.testapp --skip-git --skip-deps --quiet 2>/dev/null
+
+    local failed=0
+
+    test -d "TestApp" && pass "TestApp directory created" || { fail "TestApp directory not found"; failed=1; }
+
+    test -f "TestApp/build.gradle.kts" && pass "build.gradle.kts created" || { fail "build.gradle.kts not found"; failed=1; }
+
+    test -f "TestApp/settings.gradle.kts" && pass "settings.gradle.kts created" || { fail "settings.gradle.kts not found"; failed=1; }
+
+    test -f "TestApp/gradle.properties" && pass "gradle.properties created" || { fail "gradle.properties not found"; failed=1; }
+
+    test -f "TestApp/gradle/libs.versions.toml" && pass "gradle/libs.versions.toml created" || { fail "gradle/libs.versions.toml not found"; failed=1; }
+
+    test -f "TestApp/gradlew" && pass "gradlew created" || { fail "gradlew not found"; failed=1; }
+
+    test -f "TestApp/.gitignore" && pass ".gitignore created" || { fail ".gitignore not found"; failed=1; }
+
+    test -d "TestApp/apps/ios" && pass "apps/ios directory created" || { fail "apps/ios directory not found"; failed=1; }
+
+    test -d "TestApp/apps/android" && pass "apps/android directory created" || { fail "apps/android directory not found"; failed=1; }
+
+    test -f "TestApp/apps/ios/TestApp/TestApp/Info.plist" && pass "iOS Info.plist created" || { fail "iOS Info.plist not found"; failed=1; }
+
+    test -f "TestApp/apps/ios/TestApp/TestApp/ContentView.swift" && pass "iOS ContentView.swift created" || { fail "iOS ContentView.swift not found"; failed=1; }
+
+    test -f "TestApp/apps/ios/TestApp/TestApp.xcodeproj/project.pbxproj" && pass "iOS project.pbxproj created" || { fail "iOS project.pbxproj not found"; failed=1; }
+
+    test -d "TestApp/testapp/src/commonMain/kotlin/com/mycompany/testapp" && pass "commonMain source set created" || { fail "commonMain source set not found"; failed=1; }
+
+    test -d "TestApp/testapp/src/androidMain/kotlin/com/mycompany/testapp" && pass "androidMain source set created" || { fail "androidMain source set not found"; failed=1; }
+
+    test -f "TestApp/testapp/src/androidMain/AndroidManifest.xml" && pass "AndroidManifest.xml created" || { fail "AndroidManifest.xml not found"; failed=1; }
+
+    test -d "TestApp/testapp/src/iosMain/kotlin/com/mycompany/testapp" && pass "iosMain source set created" || { fail "iosMain source set not found"; failed=1; }
+
+    test -f "TestApp/testapp/build.gradle.kts" && pass "testapp/build.gradle.kts created" || { fail "testapp/build.gradle.kts not found"; failed=1; }
+
+    test -f "TestApp/apps/android/build.gradle.kts" && pass "apps/android/build.gradle.kts created" || { fail "apps/android/build.gradle.kts not found"; failed=1; }
+
+    test -f "TestApp/apps/android/src/main/kotlin/com/mycompany/testapp/android/MainActivity.kt" && pass "MainActivity.kt created" || { fail "MainActivity.kt not found"; failed=1; }
+
+    test -f "TestApp/apps/ios/TestApp/TestApp/TestAppApp.swift" && pass "iOS TestAppApp.swift created" || { fail "iOS TestAppApp.swift not found"; failed=1; }
+
+    test -f "TestApp/gradle/wrapper/gradle-wrapper.jar" && pass "gradle-wrapper.jar created" || { fail "gradle-wrapper.jar not found"; failed=1; }
+
+    test -f "TestApp/gradle/wrapper/gradle-wrapper.properties" && pass "gradle-wrapper.properties created" || { fail "gradle-wrapper.properties not found"; failed=1; }
+
+    test -f "TestApp/gradlew.bat" && pass "gradlew.bat created" || { fail "gradlew.bat not found"; failed=1; }
+
+    test -f "TestApp/testapp/src/commonMain/kotlin/com/mycompany/testapp/App.kt" && pass "App.kt created" || { fail "App.kt not found"; failed=1; }
+
+    test -f "TestApp/testapp/src/iosMain/kotlin/com/mycompany/testapp/MainViewController.kt" && pass "MainViewController.kt created" || { fail "MainViewController.kt not found"; failed=1; }
+
+    test -x "TestApp/gradlew" && pass "gradlew is executable" || { fail "gradlew is not executable"; failed=1; }
+
+    # Content placeholder verification
+    if grep -q "com.mycompany.testapp" "TestApp/testapp/build.gradle.kts"; then
+        pass "package name replaced in testapp/build.gradle.kts"
+    else
+        fail "package name not replaced in testapp/build.gradle.kts"; failed=1
+    fi
+
+    if grep -q "TestApp" "TestApp/settings.gradle.kts" && ! grep -q "KmpTemplate" "TestApp/settings.gradle.kts"; then
+        pass "project name replaced in settings.gradle.kts"
+    else
+        fail "project name not replaced in settings.gradle.kts"; failed=1
+    fi
+
+    if ! grep -q "com.example" "TestApp/testapp/build.gradle.kts"; then
+        pass "no leftover com.example in testapp/build.gradle.kts"
+    else
+        fail "leftover com.example found in testapp/build.gradle.kts"; failed=1
+    fi
+
+    rm -rf TestApp
+
+    if [ $failed -eq 0 ]; then
+        printf "${GREEN}✓${NC} new command verification passed\n"
+    else
+        printf "${RED}✗${NC} new command verification failed\n"
+        return 1
+    fi
+}
+
+verify_new_skip_ios() {
+    echo "Verifying new --skip-ios command..."
+    rm -rf TestAppNoIos
+
+    "$BUILD_DIR" new TestAppNoIos --package=com.mycompany.testapp --skip-git --skip-deps --skip-ios --quiet 2>/dev/null
+
+    local failed=0
+
+    test -d "TestAppNoIos" && pass "TestAppNoIos directory created" || { fail "TestAppNoIos directory not found"; failed=1; }
+
+    test -d "TestAppNoIos/apps/android" && pass "apps/android directory present" || { fail "apps/android directory not found"; failed=1; }
+
+    if [ ! -d "TestAppNoIos/apps/ios" ]; then
+        pass "apps/ios directory correctly skipped"
+    else
+        fail "apps/ios directory should not exist with --skip-ios"; failed=1
+    fi
+
+    if [ ! -d "TestAppNoIos/testappnoios/src/iosMain" ]; then
+        pass "iosMain source set correctly skipped"
+    else
+        fail "iosMain source set should not exist with --skip-ios"; failed=1
+    fi
+
+    rm -rf TestAppNoIos
+
+    if [ $failed -eq 0 ]; then
+        printf "${GREEN}✓${NC} new --skip-ios verification passed\n"
+    else
+        printf "${RED}✗${NC} new --skip-ios verification failed\n"
+        return 1
+    fi
+}
+
+run_tests() {
+    local failed=0
+    local total_start
+    total_start=$(now)
+
+    verify_version || failed=1
+    echo
+
+    verify_help || failed=1
+    echo
+
+    verify_new || failed=1
+    echo
+
+    verify_new_skip_ios || failed=1
+    echo
+
+    if [ $failed -eq 0 ]; then
+        printf "${GREEN}All verifications passed!${NC} (total: %s)\n" "$(elapsed "$(now)" "$total_start")"
+    else
+        printf "${RED}Some verifications failed!${NC} (total: %s)\n" "$(elapsed "$(now)" "$total_start")"
+    fi
+
+    return $failed
+}
+
+run_tests

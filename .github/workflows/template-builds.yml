@@ -1,0 +1,97 @@
+name: Template Builds
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'kmp-cli/src/main/resources/templates/**'
+
+concurrency:
+  group: template-builds-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-cli:
+    name: Build CLI
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: gradle/actions/wrapper-validation@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build native binary
+        run: ./gradlew linkReleaseExecutableLinuxX64
+
+      - name: Assemble distribution
+        run: ./gradlew assembleDist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cli-dist
+          path: kmp-cli/build/dist/
+          retention-days: 1
+
+  build-android:
+    name: Build Android App
+    needs: build-cli
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: cli-dist
+          path: cli-dist
+
+      - name: Make CLI executable
+        run: chmod +x cli-dist/bin/kmp-cli.kexe
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Scaffold project
+        run: ./cli-dist/bin/kmp-cli.kexe new TestApp --package=com.test.app --skip-git --skip-deps --skip-ios --quiet
+
+      - name: Build Android app
+        run: ./gradlew :apps:android:assembleDevDebug
+        working-directory: TestApp
+
+  build-ios:
+    name: Build iOS App
+    needs: build-cli
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build macOS CLI binary
+        run: ./gradlew assembleDist
+
+      - name: Scaffold project
+        run: ./kmp-cli/build/dist/bin/kmp-cli.kexe new TestApp --package=com.test.app --skip-git --skip-deps --quiet
+
+      - name: Build iOS app
+        run: |
+          xcodebuild build \
+            -project apps/ios/TestApp/TestApp.xcodeproj \
+            -scheme "TestApp Dev" \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO
+        working-directory: TestApp

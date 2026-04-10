@@ -33,7 +33,7 @@ jobs:
       - name: Assemble distribution
         run: ./gradlew assembleDist
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: cli-dist
           path: kmp-cli/build/dist/

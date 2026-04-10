@@ -24,7 +24,7 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       - name: Compile and test
         run: ./gradlew compileKotlinLinuxX64 allTests
@@ -58,7 +58,7 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       - name: Build native binary
         run: ./gradlew assembleDist -PcliVersion=${GITHUB_REF_NAME#v}

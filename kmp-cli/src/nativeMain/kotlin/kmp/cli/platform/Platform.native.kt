@@ -5,7 +5,7 @@ import okio.Path
 import okio.Path.Companion.toPath
 import platform.posix.getenv
 import kotlinx.cinterop.toKString
-import platform.posix.chmod
+import platform.posix.system
 
 @OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
 actual fun getenv(name: String): String? = getenv(name)?.toKString()
@@ -22,7 +22,7 @@ actual fun osName(): String {
 
 @OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
 actual fun setExecutable(path: Path) {
-    chmod(path.toString(), 0b111101101u) // 0755
+    system("chmod 755 \"${path.toString()}\"")
 }
 
 @OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)

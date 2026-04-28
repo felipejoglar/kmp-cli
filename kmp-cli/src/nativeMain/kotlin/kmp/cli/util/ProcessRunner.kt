@@ -6,6 +6,7 @@ import platform.posix.popen
 import platform.posix.fgets
 import platform.posix.chdir
 import platform.posix.getcwd
+import platform.posix.system
 import kotlinx.cinterop.refTo
 import kotlinx.cinterop.toKString
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -37,7 +38,8 @@ actual class ProcessRunner actual constructor(private val logger: Logger, privat
             lines.addLast(line)
         }
 
-        val exitCode = pclose(pipe)
+        val status = pclose(pipe)
+        val exitCode = status shr 8
 
         if (oldDir != null) chdir(oldDir)
 
@@ -47,5 +49,20 @@ actual class ProcessRunner actual constructor(private val logger: Logger, privat
             )
         }
         logger.info("      $successMessage")
+    }
+
+    actual fun runPassthrough(command: List<String>, silent: Boolean) {
+        if (!silent) logger.run(command.joinToString(" "))
+        if (pretend) return
+
+        val shellCommand = command.joinToString(" ") { arg ->
+            if (arg.contains(' ') || arg.contains('\'')) "'${arg.replace("'", "'\\''")}'" else arg
+        }
+
+        val status = system(shellCommand)
+        val exitCode = status shr 8
+        if (exitCode != 0) {
+            throw RuntimeException("${command.first()} failed (exit code $exitCode)")
+        }
     }
 }

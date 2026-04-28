@@ -1,9 +1,8 @@
 package kmp.cli.config
 
-import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.output.HelpFormatter
 
-class CliHelpFormatter(private val context: Context) : HelpFormatter {
+class CliHelpFormatter : HelpFormatter {
     
     private fun flattenParameters(parameters: List<HelpFormatter.ParameterHelp>): List<Pair<String, String>> {
         val result = mutableListOf<Pair<String, String>>()
@@ -14,20 +13,23 @@ class CliHelpFormatter(private val context: Context) : HelpFormatter {
                     val hasShortName = allNames.any { it.startsWith("-") && !it.startsWith("--") }
                     val nameStr = allNames.joinToString(", ")
                     val prefix = if (hasShortName) "  " else "      "
-                    
+
                     val isFlag = section.nvalues.isEmpty()
                     val metaStr = if (!isFlag && section.metavar != null) "=${section.metavar}" else ""
-                    val defaultStr = if (isFlag) "" else section.tags["default"]?.let { 
+                    val defaultStr = if (isFlag) "" else section.tags["default"]?.let {
                         if (it.isNotEmpty()) " [default: $it]" else ""
                     } ?: ""
                     result.add("$prefix$nameStr$metaStr" to (section.help + defaultStr))
                 }
+
                 is HelpFormatter.ParameterHelp.Subcommand -> {
                     result.add("  ${section.name}" to section.help)
                 }
+
                 is HelpFormatter.ParameterHelp.Argument -> {
                     result.add("  ${section.name}" to section.help)
                 }
+
                 is HelpFormatter.ParameterHelp.Group -> {
                     result.add("${section.name}  ${section.help}" to "")
                 }
@@ -35,7 +37,7 @@ class CliHelpFormatter(private val context: Context) : HelpFormatter {
         }
         return result
     }
-    
+
     override fun formatHelp(
         error: com.github.ajalt.clikt.core.UsageError?,
         prolog: String,
@@ -45,8 +47,9 @@ class CliHelpFormatter(private val context: Context) : HelpFormatter {
     ): String {
         val commands = parameters.filterIsInstance<HelpFormatter.ParameterHelp.Subcommand>()
         val arguments = parameters.filterIsInstance<HelpFormatter.ParameterHelp.Argument>()
-        val options = parameters.filter { it !is HelpFormatter.ParameterHelp.Subcommand && it !is HelpFormatter.ParameterHelp.Argument }
-        
+        val options =
+            parameters.filter { it !is HelpFormatter.ParameterHelp.Subcommand && it !is HelpFormatter.ParameterHelp.Argument }
+
         val builder = StringBuilder()
         builder.append("\n")
 
@@ -54,46 +57,44 @@ class CliHelpFormatter(private val context: Context) : HelpFormatter {
             builder.append(error.message)
             builder.append("\n\n")
         }
-        
-        builder.append("""
-            ██╗  ██╗███╗   ███╗██████╗      ██████╗██╗     ██╗
-            ██║ ██╔╝████╗ ████║██╔══██╗    ██╔════╝██║     ██║
-            █████╔╝ ██╔████╔██║██████╔╝    ██║     ██║     ██║
-            ██╔═██╗ ██║╚██╔╝██║██╔═══╝     ██║     ██║     ██║
-            ██║  ██╗██║ ╚═╝ ██║██║         ╚██████╗███████╗██║
-            ╚═╝  ╚═╝╚═╝     ╚═╝╚═╝          ╚═════╝╚══════╝╚═╝
-        """.trimIndent())
+
+        builder.append(asciiArt)
 
         val argNames = arguments.joinToString(" ") { it.name }
-        val usageLine = if (argNames.isNotEmpty()) {
-            "  $programName $argNames [options]"
-        } else {
-            "  $programName COMMAND [options]"
+        val usageLine = when {
+            argNames.isNotEmpty() -> "  $programName $argNames [options]"
+            commands.isNotEmpty() -> "  $programName COMMAND [options]"
+            else -> "  $programName [options]"
         }
         builder.append("\n\nUsage:\n$usageLine\n")
-        
+
         if (commands.isNotEmpty()) {
+            val commandItems = flattenParameters(commands)
+            val maxWidth = commandItems.maxOfOrNull { it.first.length } ?: 0
             builder.append("\nCommands:\n")
-            for ((name, help) in flattenParameters(commands)) {
+            for ((name, help) in commandItems) {
                 builder.append(name)
                 if (help.isNotEmpty()) {
-                    builder.append("  ")
+                    val padding = " ".repeat(maxWidth - name.length + 2)
+                    builder.append(padding)
                     builder.append(help)
                 }
                 builder.append("\n")
             }
             builder.append("\nAll commands can be run with -h (or --help) for more information.\n")
         }
-        
+
         if (options.isNotEmpty()) {
             val groupNames = options.filterIsInstance<HelpFormatter.ParameterHelp.Option>()
                 .mapNotNull { it.groupName }.toSet()
-            
-            val ungroupedOptions = options.filter { it !is HelpFormatter.ParameterHelp.Group && 
-                (it !is HelpFormatter.ParameterHelp.Option || it.groupName !in groupNames) }
+
+            val ungroupedOptions = options.filter {
+                it !is HelpFormatter.ParameterHelp.Group &&
+                        (it !is HelpFormatter.ParameterHelp.Option || it.groupName !in groupNames)
+            }
             val allItems = flattenParameters(options)
             val maxWidth = allItems.maxOfOrNull { it.first.length } ?: 0
-            
+
             if (ungroupedOptions.isNotEmpty()) {
                 builder.append("\nOptions:\n")
                 for ((name, help) in flattenParameters(ungroupedOptions)) {
@@ -106,9 +107,10 @@ class CliHelpFormatter(private val context: Context) : HelpFormatter {
                     builder.append("\n")
                 }
             }
-            
+
             for (groupName in groupNames) {
-                val groupOptions = options.filter { it is HelpFormatter.ParameterHelp.Option && it.groupName == groupName }
+                val groupOptions =
+                    options.filter { it is HelpFormatter.ParameterHelp.Option && it.groupName == groupName }
                 if (groupOptions.isNotEmpty()) {
                     builder.append("\n$groupName:\n")
                     for ((name, help) in flattenParameters(groupOptions)) {
@@ -123,12 +125,23 @@ class CliHelpFormatter(private val context: Context) : HelpFormatter {
                 }
             }
         }
-        
+
         if (epilog.isNotEmpty()) {
             builder.append("\n")
             builder.append(epilog)
         }
-        
+
         return builder.toString().trimEnd()
+    }
+
+    companion object {
+        private val asciiArt = """
+            ██╗  ██╗███╗   ███╗██████╗      ██████╗██╗     ██╗
+            ██║ ██╔╝████╗ ████║██╔══██╗    ██╔════╝██║     ██║
+            █████╔╝ ██╔████╔██║██████╔╝    ██║     ██║     ██║
+            ██╔═██╗ ██║╚██╔╝██║██╔═══╝     ██║     ██║     ██║
+            ██║  ██╗██║ ╚═╝ ██║██║         ╚██████╗███████╗██║
+            ╚═╝  ╚═╝╚═╝     ╚═╝╚═╝          ╚═════╝╚══════╝╚═╝
+        """.trimIndent()
     }
 }

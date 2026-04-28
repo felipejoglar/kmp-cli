@@ -48,7 +48,7 @@ class NewCommand : CliktCommand(name = "new") {
     private val skipGit by option("-G", "--skip-git", help = "Skip git init").flag()
     private val skipDeps by option("--skip-deps", help = "Skip running gradle assemble after generation").flag()
     private val skipIos by option("--skip-ios", help = "Skip iOS project generation").flag()
-    private val runtime by NewCommandOptions()
+    private val runtime by RuntimeOptions()
 
     override fun run() {
         val inputPath = appPath.toPath()

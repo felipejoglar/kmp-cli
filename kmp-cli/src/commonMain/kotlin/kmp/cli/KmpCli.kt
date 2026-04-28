@@ -11,7 +11,7 @@ class KmpCli : CliktCommand(name = "kmp-cli") {
         context {
             helpOptionNames = setOf("--help", "-h")
             localization = KmpLocalization()
-            helpFormatter = { CliHelpFormatter(it) }
+            helpFormatter = { CliHelpFormatter() }
         }
         versionOption(BuildConfig.VERSION, names = setOf("--version", "-v"), help = "Show version number", message = { "KMP CLI $it" })
     }
